@@ -68,6 +68,14 @@ jobs:
             # make clean all install INSTALL_PREFIX="${LAZARUS_INSTALL}" -C lazarus/
             make clean all -C lazarus/
 
+            cd lazarus/
+            file lazbuild
+            file lazarus
+            ldd lazbuild
+            ldd lazarus
+            ./lazbuild --version
+            cd ../
+
             zip -r lazarus-${{ matrix.arch }}-snapshot.zip lazarus/
 
       - name: Archive Artifacts
