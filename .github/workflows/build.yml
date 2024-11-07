@@ -16,8 +16,8 @@ env:
   # See for posibilities:
   # https://gitlab.com/freepascal.org/lazarus/lazarus/-/tags
   # https://gitlab.com/freepascal.org/lazarus/lazarus/-/branches
-  #LAZARUS_BRANCHTAG='main' # use this for very latest commit
-  LAZARUS_BRANCHTAG='lazarus_3_6'
+  #LAZARUS_BRANCHTAG: 'main' # use this for very latest commit
+  LAZARUS_BRANCHTAG: 'lazarus_3_6'
 
 jobs:
   build-arm:
