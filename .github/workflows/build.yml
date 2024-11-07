@@ -1,0 +1,115 @@
+# ----------------------------------------------------------------------------
+# GitHub Actions workflow to build this.
+# See ../../README.md for more information.
+# ----------------------------------------------------------------------------
+
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+
+env:
+  # Lazarus branch or tag.
+  # See for posibilities:
+  # https://gitlab.com/freepascal.org/lazarus/lazarus/-/tags
+  # https://gitlab.com/freepascal.org/lazarus/lazarus/-/branches
+  #LAZARUS_BRANCHTAG='main' # use this for very latest commit
+  LAZARUS_BRANCHTAG='lazarus_3_6'
+
+jobs:
+  build-arm:
+    name: Build for Raspberry Pi (Linux / Arm or Aarch64)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [armv7l, aarch64]
+        include:
+        # Raspberry Pi 32-bit (Arm), bullseye (older version, used on Raspberry Pi 4 by default)
+        - arch: armv7l
+          cpu: cortex-a7
+          base_image: dietpi:rpi_armv7_bullseye
+          cpu_info: cpuinfo/raspberrypi_3b
+        # Raspberry Pi 64-bit (Aarch64), latest (bookworm)
+        - arch: aarch64
+          cpu: cortex-a53
+          base_image: raspios_lite_arm64:latest
+          cpu_info: cpuinfo/raspberrypi_zero2_w_arm64_w
+    steps:
+      # Not needed
+      # - uses: actions/checkout@v4
+
+      - uses: pguyot/arm-runner-action@v2
+        with:
+          base_image: ${{ matrix.base_image }}
+          cpu: ${{ matrix.cpu }}
+
+          shell: /bin/bash -eo pipefail
+          image_additional_mb: 4096
+          # Avoids the need for copy_artifact_path later.
+          bind_mount_repository: true
+          commands: |
+            # Useful string to grep logs, because log of script execution is somewhat buried in the middle of pguyot/arm-runner-action log
+            echo 'CGE script starts here'
+
+            # Install FPC+Lazarus and other Linux dependencies
+            sudo apt-get update
+            sudo apt-get --no-install-recommends -y install fpc git make
+
+            # Check versions (and availability) of our requirements early
+            fpc -iV
+            make --version
+
+            git clone https://gitlab.com/freepascal.org/lazarus/lazarus.git --depth 1 --single-branch --branch "${LAZARUS_BRANCHTAG}"
+
+            # for now, just package source + build artifacts
+            # make clean all install INSTALL_PREFIX="${LAZARUS_INSTALL}" -C lazarus/
+            make clean all -C lazarus/
+
+            zip -r lazarus-${{ matrix.arch }}-snapshot.zip lazarus/
+
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspberry-pi-${{ matrix.arch }}-release
+          path: "lazarus*.zip"
+          if-no-files-found: error
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # Only upload release if all builds, on all runners, succeeded.
+    needs: [build-arm]
+    steps:
+    - name: Download packaged releases
+      uses: actions/download-artifact@v4
+      with:
+        merge-multiple: true
+    - name: List downloaded files
+      run: ls -R
+    - name: GH CLI status
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh auth status
+    # Releases files in the "snapshot" release.
+    - name: Release Artifacts
+      if: ${{ github.ref == 'refs/heads/master' }}
+      run: gh release --repo ${{ github.repository }} upload snapshot --clobber *.zip
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+  update-release-tag:
+    name: Update Release Tag (make snapshot tag point to the build commit on master branch)
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Update Release Tag
+      if: ${{ github.ref == 'refs/heads/master' }}
+      run: |
+        # --force allows to overwrite previous tag
+        git tag --force snapshot
+        # --force allows to push with overwritten tag
+        git push --force origin snapshot
