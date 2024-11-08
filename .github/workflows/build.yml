@@ -71,6 +71,7 @@ jobs:
             # for now, just package source + build artifacts
             # make clean all install INSTALL_PREFIX="${LAZARUS_INSTALL}" -C lazarus/
             make clean all -C lazarus/
+            rm -rf lazarus/.git # smaller size
 
             cd lazarus/
             file lazbuild
