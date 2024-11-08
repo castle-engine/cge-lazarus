@@ -58,6 +58,10 @@ jobs:
             sudo apt-get update
             sudo apt-get --no-install-recommends -y install fpc git make zip file libc-bin
 
+            # Set environment
+            export "FPC_OS="`fpc -iTO`
+            export "FPC_CPU="`fpc -iTP`
+
             # Check versions (and availability) of our requirements early
             fpc -iV
             make --version
@@ -77,7 +81,7 @@ jobs:
             ./lazbuild --version
             cd ../
 
-            zip -r lazarus-${{ matrix.arch }}-snapshot.zip lazarus/
+            zip -r lazarus-${FPC_OS} ${FPC_CPU}.zip lazarus/
 
       - name: Archive Artifacts
         uses: actions/upload-artifact@v4
