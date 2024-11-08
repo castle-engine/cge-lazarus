@@ -71,8 +71,9 @@ jobs:
             cd lazarus/
             file lazbuild
             file lazarus
-            ldd lazbuild
-            ldd lazarus
+            # ldd known to fail on Linux / Aarch64 in QEMU: https://github.com/multiarch/qemu-user-static/issues/172
+            #ldd lazbuild
+            #ldd lazarus
             ./lazbuild --version
             cd ../
 
