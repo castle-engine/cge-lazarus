@@ -56,7 +56,7 @@ jobs:
 
             # Install FPC+Lazarus and other Linux dependencies
             sudo apt-get update
-            sudo apt-get --no-install-recommends -y install fpc git make zip
+            sudo apt-get --no-install-recommends -y install fpc git make zip file libc-bin
 
             # Check versions (and availability) of our requirements early
             fpc -iV
