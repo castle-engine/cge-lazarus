@@ -39,7 +39,7 @@ jobs:
           cpu_info: cpuinfo/raspberrypi_zero2_w_arm64_w
     steps:
       # Not needed
-      # - uses: actions/checkout@v4
+      # - uses: actions/checkout@v5
 
       - uses: pguyot/arm-runner-action@v2
         with:
@@ -119,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Update Release Tag
       if: ${{ github.ref == 'refs/heads/master' }}
       run: |
