@@ -5,11 +5,11 @@
 
 name: Build
 
-on:
-  pull_request:
-  push:
-    branches:
-      - '**'
+# workflow_dispatch allows to call it manually
+# See https://docs.github.com/en/actions/using-workflows/manually-running-a-workflow .
+# This is useful e.g. when rpi OS changed, e.g. FPC version changed,
+# so you want to rebuild Lazarus packages based on it.
+on: [push, pull_request, workflow_dispatch]
 
 env:
   # Lazarus branch or tag.
