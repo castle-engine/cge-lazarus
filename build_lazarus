@@ -25,22 +25,14 @@ OS=$1
 CPU=$2
 shift 2
 
+source cge-fpc/build_utilities
+
 # ---------------------------------------------------------------------
 # bash functions, do_xxx, to be executed in order to perform the script logic.
 
 # Determine variables used through the rest of the script.
 do_setup_environment ()
 {
-  # calculate WORKSPACE_ROOT and WORKSPACE_ROOT_UNIX.
-  # On Windows they differ:
-  # - WORKSPACE_ROOT_UNIX is in Cygwin path format (with /, without :, more suitable for $PATH)
-  # - WORKSPACE_ROOT is in native (on Windows) path format, understood also by non-Msys2/Cygwin tools
-  WORKSPACE_ROOT_UNIX="`pwd`"
-  WORKSPACE_ROOT="${WORKSPACE_ROOT_UNIX}"
-  if which cygpath > /dev/null; then
-    WORKSPACE_ROOT="`cygpath --mixed \"${WORKSPACE_ROOT}\"`"
-  fi
-
   # Lazarus branch or tag.
   # See for posibilities:
   # https://gitlab.com/freepascal.org/lazarus/lazarus/-/tags
@@ -50,21 +42,8 @@ do_setup_environment ()
 
   ZIP_NAME="lazarus-${OS}-${CPU}.zip"
 
-  # calculate IS_UNIX, IS_WINDOWS (happen to be negation of each other now)
-  if [ "${OS}" = "win64" -o "${OS}" = "win32" ]; then
-    IS_UNIX=false
-    IS_WINDOWS=true
-  else
-    IS_UNIX=true
-    IS_WINDOWS=false
-  fi
-
   echo "Variables calculated:"
   echo "  ZIP_NAME (we will make this file): ${ZIP_NAME}"
-  echo "  IS_UNIX: ${IS_UNIX}"
-  echo "  IS_WINDOWS: ${IS_WINDOWS}"
-  echo "  WORKSPACE_ROOT_UNIX: ${WORKSPACE_ROOT_UNIX}"
-  echo "  WORKSPACE_ROOT: ${WORKSPACE_ROOT}"
   echo
   echo "  OS and CPU (source and target):"
   echo "  OS: ${OS}"
@@ -111,12 +90,20 @@ do_calculate_fpc_opts ()
 
 do_lazarus_build ()
 {
+  if [ "${IS_WINDOWS}" = "true" ]; then
+    utils_download_and_setup_fpc_build_resources
+  fi
+
   # Unused. For now, we just package source + build together
   # make clean all install INSTALL_PREFIX="${LAZARUS_INSTALL}" -C lazarus/
 
   make clean all -C lazarus/ \
     FPC="${WORKSPACE_ROOT}/fpc/bin/fpc" \
     OPT="${FPC_OPTS}"
+
+  if [ "${IS_WINDOWS}" = "true" ]; then
+    export PATH="$RESTORE_PATH"
+  fi
 }
 
 # pack to zip.
@@ -158,6 +145,7 @@ do_test_program ()
 # ---------------------------------------------------------------------
 # main: execute bash functions in order
 
+utils_setup_environment
 do_setup_environment
 do_cleanup
 do_lazarus_sources_get

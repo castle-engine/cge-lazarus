@@ -50,7 +50,13 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout cge-lazarus
+        uses: actions/checkout@v6
+      - name: Checkout cge-fpc
+        uses: actions/checkout@v6
+        with:
+          repository: castle-engine/cge-fpc
+          path: cge-fpc
 
       - name: Install dependencies (Windows)
         if: ${{ matrix.runner == 'windows-latest' }}
@@ -102,7 +108,14 @@ jobs:
           build_cpu: aarch64
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout cge-lazarus
+        uses: actions/checkout@v6
+      - name: Checkout cge-fpc
+        uses: actions/checkout@v6
+        with:
+          repository: castle-engine/cge-fpc
+          path: cge-fpc
+
       - uses: pguyot/arm-runner-action@v2
         with:
           base_image: ${{ matrix.base_image }}
