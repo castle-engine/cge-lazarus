@@ -139,6 +139,11 @@ do_test_program ()
     --opt="${FPC_OPTS}" \
     test_project/test_project.lpi
 
+  if [ "${OS}" = 'linux' ]; then
+    echo 'Aborting running test_project, as it cannot be done with a display (e.g. on CI/CD).'
+    return
+  fi
+
   local TEST_PROGRAM_OUTPUT="`./test_project/test_project`"
   if [ "$IS_WINDOWS" = 'true' ]; then
     # remove \r at the end, following https://superuser.com/questions/489180/remove-r-from-echoing-out-in-bash-script
