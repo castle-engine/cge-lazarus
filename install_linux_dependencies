@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+
+# --------------------------------------------------------------------
+# Run within GH-hosted Linux runner and within ARM runners (for Raspberry Pi)
+# to install appropriate dependencies using apt-get.
+# --------------------------------------------------------------------
+
+sudo apt-get update
+sudo apt-get --no-install-recommends -y install git make zip libgtk2.0-dev

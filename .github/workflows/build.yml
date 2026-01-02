@@ -61,6 +61,12 @@ jobs:
       - name: Install dependencies (Windows)
         if: ${{ matrix.runner == 'windows-latest' }}
         run: choco install wget
+      - name: Install dependencies (Linux)
+        if: ${{ matrix.runner == 'ubuntu-latest' }}
+        run: ./install_linux_dependencies
+      - name: Install dependencies (macOS)
+        if: ${{ matrix.runner == 'macos-latest' || matrix.runner == 'macos-15-intel' }}
+        run: brew install wget
 
       - name: Build Lazarus
         run: ./build_lazarus ${{ matrix.build_os }} ${{ matrix.build_cpu }}
@@ -125,12 +131,7 @@ jobs:
           # Avoids the need for copy_artifact_path later.
           bind_mount_repository: true
           commands: |
-
-            # get dependencies
-            sudo apt-get update
-            sudo apt-get --no-install-recommends -y install git make zip libgtk2.0-dev
-
-            # run build_lazarus
+            ./install_linux_dependencies
             ./build_lazarus ${{ matrix.build_os }} ${{ matrix.build_cpu }}
 
       - name: Release Artifacts
