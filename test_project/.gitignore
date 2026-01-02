@@ -1,0 +1,5 @@
+/test_project
+/test_project.exe
+/test_project.res
+*.lps
+/lib/

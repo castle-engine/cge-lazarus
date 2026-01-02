@@ -1,0 +1,152 @@
+#!/bin/bash
+set -euo pipefail
+
+# ---------------------------------------------------------------------
+# Build best stable (for usage with Castle Game Engine) version of Lazarus.
+# Uses the best stable FPC version built by cge-fpc repo
+# ( https://github.com/castle-engine/cge-fpc ).
+#
+# This is very similar in organization and purpose to the cge-fpc/build_fpc
+# script, see there for a lot of comments:
+# https://github.com/castle-engine/cge-fpc/blob/master/build_fpc
+#
+# Just like build_fpc, this expects 2 command-line parameters,
+# OS and CPU, in the FPC naming conventions.
+# These are target OS and CPU to build for.... and source OS and CPU too,
+# we assume that they are the same, which allows us to test the freshly
+# build Lazarus on the same machine we build it on.
+# ---------------------------------------------------------------------
+
+# read params from command line
+OS=$1
+CPU=$2
+shift 2
+
+# ---------------------------------------------------------------------
+# bash functions, do_xxx, to be executed in order to perform the script logic.
+
+# Determine variables used through the rest of the script.
+do_setup_environment ()
+{
+  # calculate WORKSPACE_ROOT and WORKSPACE_ROOT_UNIX.
+  # On Windows they differ:
+  # - WORKSPACE_ROOT_UNIX is in Cygwin path format (with /, without :, more suitable for $PATH)
+  # - WORKSPACE_ROOT is in native (on Windows) path format, understood also by non-Msys2/Cygwin tools
+  WORKSPACE_ROOT_UNIX="`pwd`"
+  WORKSPACE_ROOT="${WORKSPACE_ROOT_UNIX}"
+  if which cygpath > /dev/null; then
+    WORKSPACE_ROOT="`cygpath --mixed \"${WORKSPACE_ROOT}\"`"
+  fi
+
+  # Lazarus branch or tag.
+  # See for posibilities:
+  # https://gitlab.com/freepascal.org/lazarus/lazarus/-/tags
+  # https://gitlab.com/freepascal.org/lazarus/lazarus/-/branches
+  #LAZARUS_BRANCHTAG='main' # use this for very latest commit
+  LAZARUS_BRANCHTAG='lazarus_4_4'
+
+  ZIP_NAME="lazarus-${OS}-${CPU}.zip"
+
+  echo "Variables calculated:"
+  echo "  ZIP_NAME (we will make this file): ${ZIP_NAME}"
+  echo "  WORKSPACE_ROOT_UNIX: ${WORKSPACE_ROOT_UNIX}"
+  echo "  WORKSPACE_ROOT: ${WORKSPACE_ROOT}"
+  echo
+  echo "  OS and CPU (source and target):"
+  echo "  OS: ${OS}"
+  echo "  CPU: ${CPU}"
+}
+
+# cleanup leftover files from previous runs
+do_cleanup ()
+{
+  rm -Rf lazarus/
+}
+
+# get Lazarus sources to lazarus/
+do_lazarus_sources_get ()
+{
+  git clone https://gitlab.com/freepascal.org/lazarus/lazarus.git \
+    -c advice.detachedHead=false \
+    --depth 1 --single-branch --branch "${LAZARUS_BRANCHTAG}" lazarus
+  rm -Rf lazarus/.git # smaller zip size and disk space, and we no longer need it
+}
+
+# Get FPC build from cge-fpc
+do_fpc_get ()
+{
+  wget https://github.com/castle-engine/cge-fpc/releases/download/snapshot/fpc-"${OS}"-"${CPU}".zip
+  unzip "fpc-${OS}-${CPU}.zip"
+  rm -f "fpc-${OS}-${CPU}.zip" # no longer needed, save disk space, important for GHA on GH-hosted runners
+}
+
+# calculate $FPC_OPTS which are used to call FPC .
+# See cge-fpc/README.md for docs what FPC options are necessary to pass.
+do_calculate_fpc_opts ()
+{
+  FPC_OPTS="-Fu${WORKSPACE_ROOT}/fpc/units/${CPU}-${OS}/*"
+  if [ "${OS}" = "darwin" ]; then
+    # Following FpcUpDeluxe:
+    # MacOS 10.14 Mojave and newer have libs and tools in new, yet non-standard directory
+    FPC_OPTS="${FPC_OPTS} -XR/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -Fl/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib -FD/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin"
+  fi
+}
+
+do_lazarus_build ()
+{
+  # Unused. For now, we just package source + build together
+  # make clean all install INSTALL_PREFIX="${LAZARUS_INSTALL}" -C lazarus/
+
+  make clean all -C lazarus/ \
+    FPC="${WORKSPACE_ROOT}/fpc/bin/fpc" \
+    FPC_OPTS="${FPC_OPTS}"
+}
+
+# pack to zip.
+do_pack_zip ()
+{
+  if which 7z > /dev/null; then
+    # Use 7z on Windows to make zip, as it's preinstalled on GH hosted Windows.
+    # ( We could alternatively install zip, e.g. using Chocolatey,
+    # or use PowerShell
+    # "run: Compress-Archive -Path folder/ -Destination new.zip"
+    # see https://stackoverflow.com/questions/74939762/create-zip-file-of-github-reporitory-using-a-workflow-which-runs-on-windows-lat )
+    7z a ${ZIP_NAME} lazarus/
+  else
+    zip -r ${ZIP_NAME} lazarus/
+  fi
+}
+
+# Test that build Lazarus can compile a simple project.
+do_test_program ()
+{
+  # TODO: Pass other options to FPC (create temp fpc.cfg?)
+
+  lazarus/lazbuild \
+    --lazarusdir="${WORKSPACE_ROOT}/lazarus" \
+    --compiler="${WORKSPACE_ROOT}/fpc/bin/fpc" \
+    test_project/project.lpi
+
+  local TEST_PROGRAM_OUTPUT="`./test_project`"
+  if [ "$IS_WINDOWS" = 'true' ]; then
+    # remove \r at the end, following https://superuser.com/questions/489180/remove-r-from-echoing-out-in-bash-script
+    TEST_PROGRAM_OUTPUT="${TEST_PROGRAM_OUTPUT%%[[:cntrl:]]}"
+  fi
+
+  if [ "${TEST_PROGRAM_OUTPUT}" != "Hello World!" ]; then
+    echo "Test program failed to execute correctly. Output: $TEST_PROGRAM_OUTPUT"
+    exit 1
+  fi
+}
+
+# ---------------------------------------------------------------------
+# main: execute bash functions in order
+
+do_setup_environment
+do_cleanup
+do_lazarus_sources_get
+do_fpc_get
+do_calculate_fpc_opts
+do_lazarus_build
+do_pack_zip
+do_test_program

@@ -1,6 +1,8 @@
 # ----------------------------------------------------------------------------
-# GitHub Actions workflow to build this.
+# GitHub Actions workflow to build Lazarus for usage in Castle Game Engine.
 # See ../../README.md for more information.
+#
+# See https://docs.github.com/en/actions for GHA docs.
 # ----------------------------------------------------------------------------
 
 name: Build
@@ -11,119 +13,130 @@ name: Build
 # so you want to rebuild Lazarus packages based on it.
 on: [push, pull_request, workflow_dispatch]
 
-env:
-  # Lazarus branch or tag.
-  # See for posibilities:
-  # https://gitlab.com/freepascal.org/lazarus/lazarus/-/tags
-  # https://gitlab.com/freepascal.org/lazarus/lazarus/-/branches
-  #LAZARUS_BRANCHTAG: 'main' # use this for very latest commit
-  LAZARUS_BRANCHTAG: 'lazarus_3_6'
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  build-arm:
-    name: Build for Raspberry Pi (Linux / Arm or Aarch64)
+  build_native:
+    name: Build Native
+    strategy:
+      matrix:
+        runner: [
+          ubuntu-latest,
+          windows-latest,
+          # last macOS using Intel
+          macos-15-intel,
+          macos-latest
+        ]
+        include:
+          # Set matrix.build_os, matrix.build_cpu .
+          # These are OS and CPU names following FPC naming convention,
+          # exactly as if from
+          # - fpc -iTO / -iSO (target/source OS)
+          # - fpc -iTP / -iSP (target/source CPU)
+          # They describe both source and target OS/CPU in our scenario.
+          - build_os: linux
+            build_cpu: x86_64
+          - runner: windows-latest
+            build_os: win64
+            build_cpu: x86_64
+          - runner: macos-latest
+            build_os: darwin
+            build_cpu: aarch64
+          - runner: macos-15-intel
+            build_os: darwin
+            build_cpu: x86_64
+
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build Lazarus
+        run: ./build_lazarus ${{ matrix.build_os }} ${{ matrix.build_cpu }}
+
+      - name: Release Artifacts
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: gh release --repo ${{ github.repository }} upload snapshot --clobber lazarus-*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # Additionally, when on Win64, build and release also Win32 version.
+      - name: Build Lazarus (for Win32)
+        if: ${{ matrix.build_os == 'win64' && matrix.build_cpu == 'x86_64' }}
+        run: ./build_lazarus win32 i386
+      - name: Release Artifacts (for Win32)
+        if: ${{ matrix.build_os == 'win64' && matrix.build_cpu == 'x86_64' && github.ref == 'refs/heads/master' }}
+        run: gh release --repo ${{ github.repository }} upload snapshot --clobber lazarus-*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build_arm_runner:
+    name: Build on ARM Runner (for Raspberry Pi)
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [armv7l, aarch64]
+        arch: [raspberry-pi-32, raspberry-pi-64]
         include:
-        # Raspberry Pi 32-bit (Arm), latest (bookworm)
-        - arch: armv7l
+
+        # additional defines for Raspberry Pi 32-bit (Arm)
+        - arch: raspberry-pi-32
+          # Arguments for pguyot/arm-runner-action
           cpu: cortex-a7
           base_image: raspios_lite:latest
-          cpu_info: cpuinfo/raspberrypi_3b
-        # Raspberry Pi 64-bit (Aarch64), latest (bookworm)
-        - arch: aarch64
+          # Arguments for build_lazarus script.
+          build_os: linux
+          build_cpu: arm
+
+        # additional defines for Raspberry Pi 64-bit (Aarch64)
+        - arch: raspberry-pi-64
+          # Arguments for pguyot/arm-runner-action
           cpu: cortex-a53
           base_image: raspios_lite_arm64:latest
-          cpu_info: cpuinfo/raspberrypi_zero2_w_arm64_w
-    steps:
-      # Not needed
-      # - uses: actions/checkout@v5
+          # Arguments for build_lazarus script.
+          build_os: linux
+          build_cpu: aarch64
 
+    steps:
+      - uses: actions/checkout@v6
       - uses: pguyot/arm-runner-action@v2
         with:
           base_image: ${{ matrix.base_image }}
           cpu: ${{ matrix.cpu }}
-
           shell: /bin/bash -eo pipefail
-          image_additional_mb: 4096
+          image_additional_mb: 6000
           # Avoids the need for copy_artifact_path later.
           bind_mount_repository: true
           commands: |
-            # Useful string to grep logs, because log of script execution is somewhat buried in the middle of pguyot/arm-runner-action log
-            echo 'CGE script starts here'
 
-            # Install FPC+Lazarus and other Linux dependencies
+            # get dependencies
             sudo apt-get update
-            sudo apt-get --no-install-recommends -y install fpc git make zip file libc-bin
+            sudo apt-get --no-install-recommends -y install git make zip
 
-            # Set environment
-            export "FPC_OS="`fpc -iTO`
-            export "FPC_CPU="`fpc -iTP`
+            # run build_lazarus
+            ./build_lazarus ${{ matrix.build_os }} ${{ matrix.build_cpu }}
 
-            # Check versions (and availability) of our requirements early
-            fpc -iV
-            make --version
+      - name: Release Artifacts
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: gh release --repo ${{ github.repository }} upload snapshot --clobber lazarus-*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
 
-            git clone https://gitlab.com/freepascal.org/lazarus/lazarus.git --depth 1 --single-branch --branch "${LAZARUS_BRANCHTAG}"
-
-            # for now, just package source + build artifacts
-            # make clean all install INSTALL_PREFIX="${LAZARUS_INSTALL}" -C lazarus/
-            make clean all -C lazarus/
-            rm -rf lazarus/.git # smaller size
-
-            cd lazarus/
-            file lazbuild
-            file lazarus
-            # ldd known to fail on Linux / Aarch64 in QEMU: https://github.com/multiarch/qemu-user-static/issues/172
-            #ldd lazbuild
-            #ldd lazarus
-            ./lazbuild --version
-            cd ../
-
-            zip -r lazarus-${FPC_OS}-${FPC_CPU}.zip lazarus/
-
-      - name: Archive Artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: raspberry-pi-${{ matrix.arch }}-release
-          path: "lazarus*.zip"
-          if-no-files-found: error
-
-  release:
-    name: Release
+  # once everything is successfull, move forward the "snapshot" tag.
+  # This makes the "XXX commits to master since this release"
+  # on https://github.com/castle-engine/cge-lazarus/releases/tag/snapshot right.
+  update_release_tag:
+    name: Update Release Tag
     runs-on: ubuntu-latest
-    # Only upload release if all builds, on all runners, succeeded.
-    needs: [build-arm]
+    needs: [build_native, build_arm_runner]
+    env:
+      release_tag: snapshot
     steps:
-    - name: Download packaged releases
-      uses: actions/download-artifact@v7
-      with:
-        merge-multiple: true
-    - name: List downloaded files
-      run: ls -R
-    - name: GH CLI status
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh auth status
-    # Releases files in the "snapshot" release.
-    - name: Release Artifacts
-      if: ${{ github.ref == 'refs/heads/master' }}
-      run: gh release --repo ${{ github.repository }} upload snapshot --clobber *.zip
-      env:
-        GH_TOKEN: ${{ github.token }}
-
-  update-release-tag:
-    name: Update Release Tag (make snapshot tag point to the build commit on master branch)
-    runs-on: ubuntu-latest
-    needs: [release]
-    steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Update Release Tag
       if: ${{ github.ref == 'refs/heads/master' }}
       run: |
         # --force allows to overwrite previous tag
-        git tag --force snapshot
+        git tag --force ${{ env.release_tag }}
         # --force allows to push with overwritten tag
-        git push --force origin snapshot
+        git push --force origin ${{ env.release_tag }}
