@@ -78,7 +78,8 @@ do_fpc_get ()
   # Using --progress=... below because default wget progress (default or --progress=dot) causes hard to read output in GHA logs.
   wget --progress=bar:force:noscroll \
     https://github.com/castle-engine/cge-fpc/releases/download/snapshot/fpc-"${OS}"-"${CPU}".zip
-  unzip "fpc-${OS}-${CPU}.zip"
+  # Use -q for more readable output in logs.
+  unzip -q "fpc-${OS}-${CPU}.zip"
   rm -f "fpc-${OS}-${CPU}.zip" # no longer needed, save disk space, important for GHA on GH-hosted runners
 }
 
