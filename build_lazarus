@@ -110,12 +110,21 @@ do_lazarus_build ()
 do_pack_zip ()
 {
   if which 7z > /dev/null; then
-    # Use 7z on Windows to make zip, as it's preinstalled on GH hosted Windows.
+    # Use 7z if available.
+    #
+    # This is preinstalled on GH hosted Windows, in contrast to zip.
     # ( We could alternatively install zip, e.g. using Chocolatey,
     # or use PowerShell
     # "run: Compress-Archive -Path folder/ -Destination new.zip"
     # see https://stackoverflow.com/questions/74939762/create-zip-file-of-github-reporitory-using-a-workflow-which-runs-on-windows-lat )
-    7z a ${ZIP_NAME} lazarus/
+    #
+    # It also seems to be actively maintained and very powerful,
+    # so let's use it.
+    #
+    # We use -snl to avoid warnings (and exit with non-zero status)
+    # because of invalid symlink "lazarus/components/chmhelp/lhelp/lhelp.app/Contents/MacOS/lhelp" .
+
+    7z a ${ZIP_NAME} lazarus/ -snl
   else
     zip -r ${ZIP_NAME} lazarus/
   fi
