@@ -15,6 +15,9 @@ set -euo pipefail
 # These are target OS and CPU to build for.... and source OS and CPU too,
 # we assume that they are the same, which allows us to test the freshly
 # build Lazarus on the same machine we build it on.
+#
+# Made to be self-containing, so this doesn't modify system-wide files
+# or $HOME/.fpc.cfg etc.
 # ---------------------------------------------------------------------
 
 # read params from command line
@@ -47,8 +50,19 @@ do_setup_environment ()
 
   ZIP_NAME="lazarus-${OS}-${CPU}.zip"
 
+  # calculate IS_UNIX, IS_WINDOWS (happen to be negation of each other now)
+  if [ "${OS}" = "win64" -o "${OS}" = "win32" ]; then
+    IS_UNIX=false
+    IS_WINDOWS=true
+  else
+    IS_UNIX=true
+    IS_WINDOWS=false
+  fi
+
   echo "Variables calculated:"
   echo "  ZIP_NAME (we will make this file): ${ZIP_NAME}"
+  echo "  IS_UNIX: ${IS_UNIX}"
+  echo "  IS_WINDOWS: ${IS_WINDOWS}"
   echo "  WORKSPACE_ROOT_UNIX: ${WORKSPACE_ROOT_UNIX}"
   echo "  WORKSPACE_ROOT: ${WORKSPACE_ROOT}"
   echo
@@ -60,7 +74,7 @@ do_setup_environment ()
 # cleanup leftover files from previous runs
 do_cleanup ()
 {
-  rm -Rf lazarus/ fpc-*.zip lazarus-*.zip
+  rm -Rf lazarus/ fpc/ fpc-*.zip lazarus-*.zip
 }
 
 # get Lazarus sources to lazarus/
@@ -102,7 +116,7 @@ do_lazarus_build ()
 
   make clean all -C lazarus/ \
     FPC="${WORKSPACE_ROOT}/fpc/bin/fpc" \
-    FPC_OPTS="${FPC_OPTS}"
+    OPT="${FPC_OPTS}"
 }
 
 # pack to zip.
@@ -123,14 +137,13 @@ do_pack_zip ()
 # Test that build Lazarus can compile a simple project.
 do_test_program ()
 {
-  # TODO: Pass other options to FPC (create temp fpc.cfg?)
-
   lazarus/lazbuild \
     --lazarusdir="${WORKSPACE_ROOT}/lazarus" \
     --compiler="${WORKSPACE_ROOT}/fpc/bin/fpc" \
-    test_project/project.lpi
+    --opt="${FPC_OPTS}" \
+    test_project/test_project.lpi
 
-  local TEST_PROGRAM_OUTPUT="`./test_project`"
+  local TEST_PROGRAM_OUTPUT="`./test_project/test_project`"
   if [ "$IS_WINDOWS" = 'true' ]; then
     # remove \r at the end, following https://superuser.com/questions/489180/remove-r-from-echoing-out-in-bash-script
     TEST_PROGRAM_OUTPUT="${TEST_PROGRAM_OUTPUT%%[[:cntrl:]]}"
