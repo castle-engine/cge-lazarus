@@ -60,7 +60,7 @@ do_setup_environment ()
 # cleanup leftover files from previous runs
 do_cleanup ()
 {
-  rm -Rf lazarus/
+  rm -Rf lazarus/ fpc-*.zip lazarus-*.zip
 }
 
 # get Lazarus sources to lazarus/
