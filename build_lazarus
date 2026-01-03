@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -xeuo pipefail
 
 # ---------------------------------------------------------------------
 # Build best stable (for usage with Castle Game Engine) version of Lazarus.
@@ -60,7 +60,8 @@ do_setup_environment ()
 # cleanup leftover files from previous runs
 do_cleanup ()
 {
-  rm -Rf lazarus/ fpc/ fpc-build-resources/ fpc-*.zip lazarus-*.zip
+  rm -Rf lazarus/ fpc/ fpc-build-resources/ fpc-config/ \
+    fpc-*.zip lazarus-*.zip
 }
 
 # get Lazarus sources to lazarus/
@@ -137,17 +138,21 @@ do_pack_zip ()
 # Test that build Lazarus can compile a simple project.
 do_test_program ()
 {
-  # lazbuild wants multiple --opt=xxx arguments when $FPC_OPTS contains
-  # multiple options (which happens now only on macOS).
-  local LAZBUILD_OPTS=''
+  # We need to pass $FPC_OPTS to fpc that is executed by lazbuild.
+  #
+  # lazbuild --opt doesn't enable us to pass options to all FPC invocations,
+  # also when it builds lpk that are used by the main project.
+  # So we need to just create config file.
+  mkdir -p fpc-config/
   for OPT in ${FPC_OPTS}; do
-    LAZBUILD_OPTS="${LAZBUILD_OPTS} --opt=${OPT}"
+    echo "${OPT}" >> fpc-config/fpc.cfg
   done
+  # FPC will look there for fpc.cfg, following https://wiki.freepascal.org/Configuration_file
+  export PPC_CONFIG_PATH="${WORKSPACE_ROOT}/fpc-config"
 
   lazarus/lazbuild \
     --lazarusdir="${WORKSPACE_ROOT}/lazarus" \
     --compiler="${WORKSPACE_ROOT}/fpc/bin/fpc${EXE_EXT}" \
-    ${LAZBUILD_OPTS} \
     test_project/test_project.lpi
 
   if [ "${OS}" = 'linux' ]; then

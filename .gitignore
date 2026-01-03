@@ -2,4 +2,5 @@
 /fpc/
 /fpc-*.zip
 /fpc-build-resources/
+/fpc-config/
 /lazarus-*.zip
