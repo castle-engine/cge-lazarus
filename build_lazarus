@@ -42,8 +42,15 @@ do_setup_environment ()
 
   ZIP_NAME="lazarus-${OS}-${CPU}.zip"
 
+  if [ "${IS_WINDOWS}" = "true" ]; then
+    EXE_EXT='.exe'
+  else
+    EXE_EXT=''
+  fi
+
   echo "Variables calculated:"
   echo "  ZIP_NAME (we will make this file): ${ZIP_NAME}"
+  echo "  EXE_EXT: ${EXE_EXT}"
   echo
   echo "  OS and CPU (source and target):"
   echo "  OS: ${OS}"
@@ -135,7 +142,7 @@ do_test_program ()
 {
   lazarus/lazbuild \
     --lazarusdir="${WORKSPACE_ROOT}/lazarus" \
-    --compiler="${WORKSPACE_ROOT}/fpc/bin/fpc" \
+    --compiler="${WORKSPACE_ROOT}/fpc/bin/fpc${EXE_EXT}" \
     --opt="${FPC_OPTS}" \
     test_project/test_project.lpi
 
