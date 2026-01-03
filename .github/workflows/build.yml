@@ -64,9 +64,6 @@ jobs:
       - name: Install dependencies (Linux)
         if: ${{ matrix.runner == 'ubuntu-latest' }}
         run: ./install_linux_dependencies
-      - name: Install dependencies (macOS)
-        if: ${{ matrix.runner == 'macos-latest' || matrix.runner == 'macos-15-intel' }}
-        run: brew install wget
 
       - name: Build Lazarus
         run: ./build_lazarus ${{ matrix.build_os }} ${{ matrix.build_cpu }}
