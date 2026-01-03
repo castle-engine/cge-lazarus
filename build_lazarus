@@ -84,15 +84,12 @@ do_fpc_get ()
 }
 
 # calculate $FPC_OPTS which are used to call FPC .
-# See cge-fpc/README.md for docs what FPC options are necessary to pass.
 do_calculate_fpc_opts ()
 {
-  FPC_OPTS="-Fu${WORKSPACE_ROOT}/fpc/units/${CPU}-${OS}/*"
-  if [ "${OS}" = "darwin" ]; then
-    # Following FpcUpDeluxe:
-    # MacOS 10.14 Mojave and newer have libs and tools in new, yet non-standard directory
-    FPC_OPTS="${FPC_OPTS} -XR/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -Fl/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib -FD/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin"
-  fi
+  utils_calculate_fpc_opts
+
+  # Add -Fu to standard units, following cge-fpc/README.md
+  FPC_OPTS="-Fu${WORKSPACE_ROOT}/fpc/units/${CPU}-${OS}/* ${FPC_OPTS}"
 }
 
 do_lazarus_build ()
