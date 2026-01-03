@@ -3,12 +3,12 @@ set -xeuo pipefail
 
 # ---------------------------------------------------------------------
 # Build best stable (for usage with Castle Game Engine) version of Lazarus.
-# Uses the best stable FPC version built by cge-fpc repo
-# ( https://github.com/castle-engine/cge-fpc ).
+# Uses the best stable FPC version built by castle-fpc repo
+# ( https://github.com/castle-engine/castle-fpc ).
 #
-# This is very similar in organization and purpose to the cge-fpc/build_fpc
+# This is very similar in organization and purpose to the castle-fpc/build_fpc
 # script, see there for a lot of comments:
-# https://github.com/castle-engine/cge-fpc/blob/master/build_fpc
+# https://github.com/castle-engine/castle-fpc/blob/master/build_fpc
 #
 # Just like build_fpc, this expects 2 command-line parameters,
 # OS and CPU, in the FPC naming conventions.
@@ -25,7 +25,7 @@ OS=$1
 CPU=$2
 shift 2
 
-source cge-fpc/build_utilities
+source castle-fpc/build_utilities
 
 # ---------------------------------------------------------------------
 # bash functions, do_xxx, to be executed in order to perform the script logic.
@@ -73,12 +73,12 @@ do_lazarus_sources_get ()
   rm -Rf lazarus/.git # smaller zip size and disk space, and we no longer need it
 }
 
-# Get FPC build from cge-fpc
+# Get FPC build from castle-fpc
 do_fpc_get ()
 {
   # Using --progress=... below because default wget progress (default or --progress=dot) causes hard to read output in GHA logs.
   wget --progress=bar:force:noscroll \
-    https://github.com/castle-engine/cge-fpc/releases/download/snapshot/fpc-"${OS}"-"${CPU}".zip
+    https://github.com/castle-engine/castle-fpc/releases/download/snapshot/fpc-"${OS}"-"${CPU}".zip
   # Use -q for more readable output in logs.
   unzip -q "fpc-${OS}-${CPU}.zip"
   rm -f "fpc-${OS}-${CPU}.zip" # no longer needed, save disk space, important for GHA on GH-hosted runners
@@ -89,7 +89,7 @@ do_calculate_fpc_opts ()
 {
   utils_calculate_fpc_opts
 
-  # Add -Fu to standard units, following cge-fpc/README.md
+  # Add -Fu to standard units, following castle-fpc/README.md
   FPC_OPTS="-Fu${WORKSPACE_ROOT}/fpc/units/${CPU}-${OS}/* ${FPC_OPTS}"
 }
 

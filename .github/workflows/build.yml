@@ -50,13 +50,13 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Checkout cge-lazarus
+      - name: Checkout castle-lazarus
         uses: actions/checkout@v6
-      - name: Checkout cge-fpc
+      - name: Checkout castle-fpc
         uses: actions/checkout@v6
         with:
-          repository: castle-engine/cge-fpc
-          path: cge-fpc
+          repository: castle-engine/castle-fpc
+          path: castle-fpc
 
       - name: Install dependencies (Windows)
         if: ${{ matrix.runner == 'windows-latest' }}
@@ -111,13 +111,13 @@ jobs:
           build_cpu: aarch64
 
     steps:
-      - name: Checkout cge-lazarus
+      - name: Checkout castle-lazarus
         uses: actions/checkout@v6
-      - name: Checkout cge-fpc
+      - name: Checkout castle-fpc
         uses: actions/checkout@v6
         with:
-          repository: castle-engine/cge-fpc
-          path: cge-fpc
+          repository: castle-engine/castle-fpc
+          path: castle-fpc
 
       - uses: pguyot/arm-runner-action@v2
         with:
@@ -139,7 +139,7 @@ jobs:
 
   # once everything is successfull, move forward the "snapshot" tag.
   # This makes the "XXX commits to master since this release"
-  # on https://github.com/castle-engine/cge-lazarus/releases/tag/snapshot right.
+  # on https://github.com/castle-engine/castle-lazarus/releases/tag/snapshot right.
   update_release_tag:
     name: Update Release Tag
     runs-on: ubuntu-latest

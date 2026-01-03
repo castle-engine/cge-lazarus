@@ -1,8 +1,8 @@
 # Lazarus builds (for Castle Game Engine)
 
-Build and package [Lazarus](https://www.lazarus-ide.org/) for usage across [Castle Game Engine](https://castle-engine.io/). Similarly to [cge-fpc](https://github.com/castle-engine/cge-fpc), which compiles FPC packaged to ZIP.
+Build and package [Lazarus](https://www.lazarus-ide.org/) for usage across [Castle Game Engine](https://castle-engine.io/). Similarly to [castle-fpc](https://github.com/castle-engine/castle-fpc), which compiles FPC packaged to ZIP.
 
-Using [GitHub Actions](https://castle-engine.io/github_actions) and release as [GitHub Releases of the `snapshot` tag](https://github.com/castle-engine/cge-lazarus/releases/tag/snapshot).
+Using [GitHub Actions](https://castle-engine.io/github_actions) and release as [GitHub Releases of the `snapshot` tag](https://github.com/castle-engine/castle-lazarus/releases/tag/snapshot).
 
 Usage:
 
