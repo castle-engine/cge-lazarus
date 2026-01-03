@@ -137,10 +137,17 @@ do_pack_zip ()
 # Test that build Lazarus can compile a simple project.
 do_test_program ()
 {
+  # lazbuild wants multiple --opt=xxx arguments when $FPC_OPTS contains
+  # multiple options (which happens now only on macOS).
+  local LAZBUILD_OPTS=''
+  for OPT in ${FPC_OPTS}; do
+    LAZBUILD_OPTS="${LAZBUILD_OPTS} --opt=${OPT}"
+  done
+
   lazarus/lazbuild \
     --lazarusdir="${WORKSPACE_ROOT}/lazarus" \
     --compiler="${WORKSPACE_ROOT}/fpc/bin/fpc${EXE_EXT}" \
-    --opt="${FPC_OPTS}" \
+    ${LAZBUILD_OPTS} \
     test_project/test_project.lpi
 
   if [ "${OS}" = 'linux' ]; then
